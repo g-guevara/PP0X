@@ -63,6 +63,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
+  // Added missing styles that were causing TypeScript errors
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  logoText: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    color: '#4285F4',
+  },
+  errorText: {
+    color: '#ff3b30',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  loadingIndicator: {
+    marginVertical: 15,
+  },
 });
 
 export default styles;

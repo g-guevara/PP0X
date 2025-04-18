@@ -1,70 +1,163 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, Button, TouchableOpacity, Image } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { StyleSheet, Text, View, TextInput, Button, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Definir el tipo para las rutas de navegación
-type RootStackParamList = {
-  Login: undefined;
-  SignUp: undefined;
-  Main: undefined;
-};
+const API_URL = 'http://localhost:5008/api'; // Update with your actual API URL for production
 
-// Crear un tipo específico para la navegación desde la pantalla de SignUp
-type SignUpScreenNavigationProp = StackNavigationProp<RootStackParamList, 'SignUp'>;
+const SignUpScreen = ({ onSignUp, navigation }: any) => {
+  // If navigation is undefined, initialize with an object that has an empty navigate method
+  const nav = navigation || { navigate: () => console.log('Navigation not available') };
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-interface SignUpScreenProps {
-  onSignUp: () => void;
-}
+  const handleInputChange = (field: string, value: string) => {
+    setFormData({
+      ...formData,
+      [field]: value
+    });
+    
+    // Clear error when user starts typing again
+    if (error) setError('');
+  };
 
-const SignUpScreen = ({ onSignUp }: SignUpScreenProps) => {
-  // Usar el tipo correcto para navigation
-  const navigation = useNavigation<SignUpScreenNavigationProp>();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
-  const handleSignUp = () => {
-    if (password !== confirmPassword) {
-      alert('Passwords do not match!');
-      return;
+  const validateForm = () => {
+    if (!formData.email || !formData.password || !formData.confirmPassword) {
+      setError('All fields are required');
+      return false;
     }
-    console.log('Email:', email);
-    console.log('Password:', password);
-    onSignUp(); // Llama a esta función después de un registro exitoso
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
+      return false;
+    }
+
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return false;
+    }
+
+    // Email validation regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSignUp = async () => {
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(`${API_URL}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name || formData.email.split('@')[0], // Use part of email as name if not provided
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Registration failed');
+        return;
+      }
+
+      // Store user data in AsyncStorage
+      await AsyncStorage.setItem('userId', data.userId);
+      await AsyncStorage.setItem('userName', data.name);
+      if (data.token) {
+        await AsyncStorage.setItem('userToken', data.token);
+      }
+
+      console.log('Registration successful:', data);
+      onSignUp(); // Call this function after successful registration
+    } catch (error) {
+      console.error('Error during registration:', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleSignUp = () => {
-    // Aquí iría la implementación real de la autenticación con Google
-    console.log('Google Sign Up iniciado');
+    // Implement Google authentication logic
+    Alert.alert('Google Sign Up', 'Google sign up functionality will be implemented here');
   };
 
   return (
     <View style={styles.container}>
+      <View style={styles.logoContainer}>
+        <Text style={styles.logoText}>Sensitivv</Text>
+      </View>
+      
       <Text style={styles.title}>Sign Up</Text>
+      
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      
+      <TextInput
+        style={styles.input}
+        placeholder="Name (Optional)"
+        value={formData.name}
+        onChangeText={(value) => handleInputChange('name', value)}
+        autoCapitalize="words"
+        editable={!isLoading}
+      />
+      
       <TextInput
         style={styles.input}
         placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
+        value={formData.email}
+        onChangeText={(value) => handleInputChange('email', value)}
         keyboardType="email-address"
         autoCapitalize="none"
+        editable={!isLoading}
       />
+      
       <TextInput
         style={styles.input}
         placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
+        value={formData.password}
+        onChangeText={(value) => handleInputChange('password', value)}
         secureTextEntry
+        editable={!isLoading}
       />
+      
       <TextInput
         style={styles.input}
         placeholder="Confirm Password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
+        value={formData.confirmPassword}
+        onChangeText={(value) => handleInputChange('confirmPassword', value)}
         secureTextEntry
+        editable={!isLoading}
       />
-      <Button title="Sign Up" onPress={handleSignUp} color="#4285F4" />
+      
+      {isLoading ? (
+        <ActivityIndicator size="large" color="#4285F4" style={styles.loadingIndicator} />
+      ) : (
+        <Button 
+          title="Sign Up" 
+          onPress={handleSignUp} 
+          color="#4285F4" 
+          disabled={isLoading} 
+        />
+      )}
       
       <View style={styles.orContainer}>
         <View style={styles.line} />
@@ -72,17 +165,20 @@ const SignUpScreen = ({ onSignUp }: SignUpScreenProps) => {
         <View style={styles.line} />
       </View>
       
-      <TouchableOpacity style={styles.googleButton} onPress={handleGoogleSignUp}>
-        <Image 
-          source={{ uri: 'https://es.m.wikipedia.org/wiki/Archivo:Google_%22G%22_logo.svg' }} 
-          style={styles.googleIcon} 
-        />
+      <TouchableOpacity 
+        style={styles.googleButton} 
+        onPress={handleGoogleSignUp}
+        disabled={isLoading}
+      >
         <Text style={styles.googleButtonText}>Sign up with Google</Text>
       </TouchableOpacity>
       
-      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.link}>Already have an account? Login</Text>
-      </TouchableOpacity>
+      <Text
+        style={styles.link}
+        onPress={() => nav.navigate('Login')}
+      >
+        Already have an account? Login
+      </Text>
     </View>
   );
 };
@@ -95,6 +191,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
     backgroundColor: '#f5f5f5',
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  logoText: {
+    fontSize: 30,
+    fontWeight: 'bold',
+    color: '#4285F4',
   },
   title: {
     fontSize: 24,
@@ -110,6 +215,14 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     paddingHorizontal: 10,
     backgroundColor: '#fff',
+  },
+  errorText: {
+    color: '#ff3b30',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  loadingIndicator: {
+    marginVertical: 15,
   },
   link: {
     marginTop: 15,
@@ -141,11 +254,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 12,
     marginBottom: 15,
-  },
-  googleIcon: {
-    width: 20,
-    height: 20,
-    marginRight: 10,
   },
   googleButtonText: {
     color: '#666',
