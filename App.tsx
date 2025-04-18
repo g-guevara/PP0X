@@ -1,5 +1,3 @@
-//  Punto de entrada principal. //
-
 import React, { useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -8,7 +6,14 @@ import LoginScreen from './screens/LoginScreen';
 import SignUpScreen from './screens/SignUpScreen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-const Stack = createStackNavigator();
+// Definimos el tipo para nuestro stack navigator
+type RootStackParamList = {
+  Login: undefined;
+  SignUp: undefined;
+  Main: undefined;
+};
+
+const Stack = createStackNavigator<RootStackParamList>();
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -18,16 +23,14 @@ export default function App() {
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {isAuthenticated ? (
-            <Stack.Screen name="Main">
-              {() => <TabNavigator />}
-            </Stack.Screen>
+            <Stack.Screen name="Main" component={TabNavigator} />
           ) : (
             <>
               <Stack.Screen name="Login">
-                {() => <LoginScreen onLogin={() => setIsAuthenticated(true)} />}
+                {(props) => <LoginScreen {...props} onLogin={() => setIsAuthenticated(true)} />}
               </Stack.Screen>
               <Stack.Screen name="SignUp">
-                {() => <SignUpScreen onSignUp={() => setIsAuthenticated(true)} />}
+                {(props) => <SignUpScreen {...props} onSignUp={() => setIsAuthenticated(true)} />}
               </Stack.Screen>
             </>
           )}

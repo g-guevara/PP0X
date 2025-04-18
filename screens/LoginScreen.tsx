@@ -1,11 +1,26 @@
 import React, { useState } from 'react';
 import { Text, View, TextInput, Button, TouchableOpacity, Image } from 'react-native';
-import styles from '../styles/LoginStyles'; // Asegúrate de que la ruta sea correcta
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import styles from '../styles/LoginStyles';
 
-const LoginScreen = ({ onLogin, navigation }: any) => {
-  // Si navigation es undefined, inicializamos con un objeto que tiene un método navigate vacío
-  const nav = navigation || { navigate: () => console.log('Navigation not available') };
-  
+// Definir el tipo para las rutas de navegación
+type RootStackParamList = {
+  Login: undefined;
+  SignUp: undefined;
+  Main: undefined;
+};
+
+// Crear un tipo específico para la navegación desde la pantalla de Login
+type LoginScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Login'>;
+
+interface LoginScreenProps {
+  onLogin: () => void;
+}
+
+const LoginScreen = ({ onLogin }: LoginScreenProps) => {
+  // Usar el tipo correcto para navigation
+  const navigation = useNavigation<LoginScreenNavigationProp>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -54,12 +69,13 @@ const LoginScreen = ({ onLogin, navigation }: any) => {
         <Text style={styles.googleButtonText}>Login with Google</Text>
       </TouchableOpacity>
       
-      <Text
-        style={styles.link}
-        onPress={() => nav.navigate('SignUp')} // Navega a la pantalla de SignUp
+      <TouchableOpacity 
+        onPress={() => navigation.navigate('SignUp')}
       >
-        Don't have an account? Sign Up
-      </Text>
+        <Text style={styles.link}>
+          Don't have an account? Sign Up
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };
